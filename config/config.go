@@ -74,7 +74,7 @@ func NewConfig(f io.Reader) (*Config, error) {
 		}
 
 		if inProgram {
-			e := parseLine(line, program)
+			e := parseProgramLine(line, program)
 			if e != nil {
 				return nil, e
 			}
@@ -83,14 +83,11 @@ func NewConfig(f io.Reader) (*Config, error) {
 	return config, nil
 }
 
-func parseLine(line string, program *Program) (err error) {
-	parts := strings.Split(line, "=")
-	if len(parts) != 2 {
-		return fmt.Errorf("Invalid program entry: %s", line)
+func parseProgramLine(line string, program *Program) error {
+	key, value, err := getKeyVal(line)
+	if err != nil {
+		return err
 	}
-
-	key := strings.TrimSpace(strings.ToLower(parts[0]))
-	value := strings.TrimSpace(parts[1])
 
 	if key == "command" {
 		program.Command = value
@@ -102,4 +99,16 @@ func parseLine(line string, program *Program) (err error) {
 		program.Priority, err = strconv.ParseInt(value, 10, 64)
 	}
 	return err
+}
+
+func getKeyVal(line string) (key, value string, err error) {
+	parts := strings.Split(line, "=")
+	if len(parts) != 2 {
+		err = fmt.Errorf("Invalid program entry: %s", line)
+		return
+	}
+
+	key = strings.TrimSpace(strings.ToLower(parts[0]))
+	value = strings.TrimSpace(parts[1])
+	return
 }
