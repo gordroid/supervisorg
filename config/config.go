@@ -67,7 +67,8 @@ func NewConfig(f io.Reader) (*Config, error) {
 			name := strings.TrimSuffix(strings.TrimPrefix(line, programSectionPrefix), "]")
 			inProgram = true
 			program = &Program{
-				Name: name,
+				Name:     name,
+				Priority: 999,
 			}
 			continue
 		}
@@ -75,7 +76,7 @@ func NewConfig(f io.Reader) (*Config, error) {
 		if inProgram {
 			e := parseLine(line, program)
 			if e != nil {
-				// TODO log the error
+				return nil, e
 			}
 		}
 	}
