@@ -3,7 +3,9 @@ package config
 import (
 	"bufio"
 	"fmt"
+	"github.com/mattn/go-shellwords"
 	"io"
+	"os/exec"
 	"strconv"
 	"strings"
 )
@@ -20,6 +22,20 @@ func (p *Program) isValid() bool {
 		return true
 	}
 	return false
+}
+
+func (p *Program) GetCmd() (cmd *exec.Cmd, err error) {
+	parser := shellwords.NewParser()
+	parser.ParseEnv = true
+	args, err := parser.Parse(p.Command)
+	if err != nil {
+		return nil, err
+	}
+	cmd = exec.Command(args[0], args[1:]...)
+	if p.Directory != "" {
+		cmd.Dir = p.Directory
+	}
+	return cmd, nil
 }
 
 type Config struct {
