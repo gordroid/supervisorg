@@ -3,47 +3,18 @@ package config
 import (
 	"bufio"
 	"fmt"
-	"github.com/mattn/go-shellwords"
+	"github.com/cfsalguero/supervisorg/program"
 	"io"
-	"os/exec"
 	"strconv"
 	"strings"
 )
 
-type Program struct {
-	Name      string
-	Command   string
-	Directory string
-	Priority  int64
-}
-
-func (p *Program) isValid() bool {
-	if p.Name != "" && p.Command != "" {
-		return true
-	}
-	return false
-}
-
-func (p *Program) GetCmd() (cmd *exec.Cmd, err error) {
-	parser := shellwords.NewParser()
-	parser.ParseEnv = true
-	args, err := parser.Parse(p.Command)
-	if err != nil {
-		return nil, err
-	}
-	cmd = exec.Command(args[0], args[1:]...)
-	if p.Directory != "" {
-		cmd.Dir = p.Directory
-	}
-	return cmd, nil
-}
-
 type Config struct {
-	Programs map[string]*Program
+	Programs map[string]*program.Program
 }
 
-func (c *Config) addProgram(p *Program) {
-	if p != nil && p.isValid() {
+func (c *Config) addProgram(p *program.Program) {
+	if p != nil && p.IsValid() {
 		c.Programs[p.Name] = p
 	}
 }
@@ -51,19 +22,19 @@ func (c *Config) addProgram(p *Program) {
 func NewConfig(f io.Reader) (*Config, error) {
 	programSectionPrefix := "[program:"
 	config := &Config{
-		Programs: make(map[string]*Program),
+		Programs: make(map[string]*program.Program),
 	}
 
 	r := bufio.NewReader(f)
 	inProgram := false
-	var program *Program = nil
+	var prg *program.Program = nil
 	lineNum := 0
 
 	for {
 		line, err := r.ReadString('\n')
 		if err != nil {
 			if inProgram {
-				config.addProgram(program)
+				config.addProgram(prg)
 			}
 			break
 		}
@@ -73,7 +44,7 @@ func NewConfig(f io.Reader) (*Config, error) {
 
 		if line == "" {
 			if inProgram {
-				config.addProgram(program)
+				config.addProgram(prg)
 			}
 			inProgram = false
 			continue
@@ -82,7 +53,7 @@ func NewConfig(f io.Reader) (*Config, error) {
 		if strings.HasPrefix(line, programSectionPrefix) {
 			name := strings.TrimSuffix(strings.TrimPrefix(line, programSectionPrefix), "]")
 			inProgram = true
-			program = &Program{
+			prg = &program.Program{
 				Name:     name,
 				Priority: 999,
 			}
@@ -90,7 +61,7 @@ func NewConfig(f io.Reader) (*Config, error) {
 		}
 
 		if inProgram {
-			e := parseProgramLine(line, program)
+			e := parseProgramLine(line, prg)
 			if e != nil {
 				return nil, e
 			}
@@ -99,7 +70,7 @@ func NewConfig(f io.Reader) (*Config, error) {
 	return config, nil
 }
 
-func parseProgramLine(line string, program *Program) error {
+func parseProgramLine(line string, program *program.Program) error {
 	key, value, err := getKeyVal(line)
 	if err != nil {
 		return err
